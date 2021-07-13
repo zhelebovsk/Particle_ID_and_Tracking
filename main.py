@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 import os
@@ -12,7 +12,7 @@ class Snap:
         self.path = {'raw': path}
         self.number = Snap.number_of_snaps
         Snap.number_of_snaps += 1
-        self.res = cv2.imread(path)[:, :, 0].shape
+        self.res = cv.imread(path)[:, :, 0].shape
 
 if __name__ == '__main__':
     # Считывание всех имен нужного формата в папке данных
@@ -37,25 +37,25 @@ if __name__ == '__main__':
             frame.path[directory] = os.getcwd() + '\\' + directory + '\\' + frame.name
     # Обрезка и запись изображений
     for frame in frames:
-        cr = cv2.imread(frame.path['raw'])[:, 0:1000, 0]
-        cv2.imwrite(frame.path['crop'], cr)
+        cr = cv.imread(frame.path['raw'])[:, 0:1000, 0]
+        cv.imwrite(frame.path['crop'], cr)
     # Поиск минимумов
-    background = cv2.imread(frames[0].path['crop'])[:, :, 0]
+    background = cv.imread(frames[0].path['crop'])[:, :, 0]
     for frame in frames:
-        background = np.minimum(cv2.imread(frame.path['crop'])[:, :, 0], background)
-        #comparison = cv2.imread(frame.path['crop'])[:, :, 0] > background
-    cv2.imwrite(os.getcwd() + '\\' + 'background.bmp', background)
+        background = np.minimum(cv.imread(frame.path['crop'])[:, :, 0], background)
+        #comparison = cv.imread(frame.path['crop'])[:, :, 0] > background
+    cv.imwrite(os.getcwd() + '\\' + 'background.bmp', background)
     # Вычитание фона
     for frame in frames:
-        subs = cv2.imread(frame.path['crop'])[:, :, 0] - background
-        cv2.imwrite(frame.path['subs'], subs)
+        subs = cv.imread(frame.path['crop'])[:, :, 0] - background
+        cv.imwrite(frame.path['subs'], subs)
 
 
     for frame in frames:
-        edge = cv2.imread(frame.path['subs'])[:, :, 0]
-        edge = cv2.Canny(edge, 40, 150)
-        cv2.imwrite(frame.path['edge'], edge)
+        edge = cv.imread(frame.path['subs'])[:, :, 0]
+        edge = cv.Canny(edge, 40, 150)
+        cv.imwrite(frame.path['edge'], edge)
 
-    cv2.imshow('a', edge)
-    cv2.waitKey(0)
-
+    cv.imshow('a', edge)
+    cv.waitKey(0)
+    cv.destroyWindow('a')

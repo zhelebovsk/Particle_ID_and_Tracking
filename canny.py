@@ -1,30 +1,96 @@
 import cv2
 import numpy as np
+import main
 
 
-def nothing(x):
-    pass
+def fill_parts_n_remove_threads(img_in, ellipse_size=3):
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ellipse_size, ellipse_size))
+    img_proc = np.copy(img_in)
+    res = np.shape(img_in)
+    if img_proc[0, 0] == 0:
+        mask = np.zeros((res[0] + 2, res[1] + 2), np.uint8)
+        cv2.floodFill(img_proc, mask, (0, 0), 255)
+    if img_proc[-1, -1] == 0:
+        mask = np.zeros((res[0] + 2, res[1] + 2), np.uint8)
+        cv2.floodFill(img_proc, mask, (res[1] - 1, res[0] - 1), 255)
+    if img_proc[0, -1] == 0:
+        mask = np.zeros((res[0] + 2, res[1] + 2), np.uint8)
+        cv2.floodFill(img_proc, mask, (res[1] - 1, 0), 255)
+    if img_proc[-1, 0] == 0:
+        mask = np.zeros((res[0] + 2, res[1] + 2), np.uint8)
+        cv2.floodFill(img_proc, mask, (0, res[0] - 1), 255)
+    img_proc = cv2.bitwise_not(img_proc)
+    img_proc = cv2.bitwise_or(img_proc, img_in)
+    img_proc = cv2.morphologyEx(img_proc, cv2.MORPH_OPEN, kernel)
+    return img_proc
+
+
+def flood(img_in, img_out, x, y, val):
+    img_in[x, y] = 0
+    img_out[x, y] = val
+    if x > 0:
+        if img_in[x - 1, y] != 0:
+            flood(img_in, img_out, x-1, y, val)
+    if x < np.shape(img_in)[0] - 1:
+        if img_in[x + 1, y] != 0:
+            flood(img_in, img_out, x + 1, y, val)
+    if y > 0:
+        if img_in[x, y - 1] != 0:
+            flood(img_in, img_out, x, y - 1, val)
+    if y < np.shape(img_in)[1] - 1:
+        if img_in[x, y + 1] != 0:
+            flood(img_in, img_out, x, y + 1, val)
+
+
+def numerate_parts(img_in):
+    img_proc = np.copy(img_in)
+    img_out = np.zeros_like(img_proc)
+    k = 0
+    a = np.argwhere(img_proc)
+    for i in a:
+        if img_proc[i[0], i[1]] != 0:
+            k += 1
+            flood(img_proc, img_out, i[0], i[1], k)
+    return img_out
+
+
+def count(img_in):
+    F = []
+    xc = []
+    yc = []
+    pos = []
+    for i in range(np.max(img_in)):
+        q = np.argwhere(img_in == i + 1)
+        pos.append(q)
+        F.append(np.shape(q)[0])
+        xc.append(np.mean(q[:, 0]))
+        yc.append(np.mean(q[:, 1]))
+    return F, [xc, yc],pos
 
 
 if __name__ == '__main__':
+
+    def nothing(a):
+        pass
+
     # считывание изображения
-    img_original = cv2.imread('image.bmp')[:, :, 0]
-    h, w = img_original.shape[:2]
-    #mask = np.zeros((h + 2, w + 2), np.uint8)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    img_original = cv2.imread('image1.bmp')[:, :, 0]
+    res = img_original.shape[:2]
 
     # создание окна и трекбаров
     window = 'adj'
     cv2.namedWindow(window)
-    cv2.createTrackbar('Gauss', window, 2, 10, nothing)
+    cv2.createTrackbar('Gauss', window, 3, 10, nothing)
     cv2.createTrackbar('threshold1', window, 50, 400, nothing)
-    cv2.createTrackbar('threshold2', window, 100, 400, nothing)
+    cv2.createTrackbar('threshold2', window, 150, 400, nothing)
 
     while True:
         # снятие значений с баров
         gauss = cv2.getTrackbarPos('Gauss', window)
         threshold1 = cv2.getTrackbarPos('threshold1', window)
+        #cv2.setTrackbarPos('threshold2', window, threshold1+100)
         threshold2 = cv2.getTrackbarPos('threshold2', window)
+
         # размытие изображение для удаления шумов
         if gauss > 0:
             img_blur = cv2.blur(img_original, (gauss, gauss))
@@ -33,18 +99,13 @@ if __name__ == '__main__':
         # преобразование Кэнни
         img_edges = cv2.Canny(img_blur, threshold1, threshold2)
         # заполение пустот
-        img_fill = np.copy(img_edges)
-        mask = np.zeros((h + 2, w + 2), np.uint8)
-        cv2.floodFill(img_fill, mask, (0, 0), 255)
-        img_fill = cv2.bitwise_not(img_fill)
-        img_fill = cv2.bitwise_or(img_fill, img_edges)
-        img_fill = cv2.morphologyEx(img_fill, cv2.MORPH_OPEN, kernel)
+        img_fill = fill_parts_n_remove_threads(img_edges, 3)
 
-        img_result = np.vstack((img_blur, img_edges, img_fill))
-        cv2.imshow(window, img_result)
-        #cv2.imshow(window, cv2.resize(img_result,(w, h)))
-
-        if cv2.waitKey(0) == ord('q'):
-            cv2.destroyAllWindows()
+        A = numerate_parts(img_fill)
+        # вывод результата
+        F, c, pos = count(A)
+        img_result = np.vstack((cv2.addWeighted(img_blur, 0.5, img_fill, 0.8, 0), img_edges, img_fill))
+        cv2.imshow(window, cv2.resize(img_result, (int(0.8*res[1]), int(0.8*3*res[0]))))
+        if cv2.waitKey(1) == ord('q'):
+            cv2.destroyWindow(window)
             break
-

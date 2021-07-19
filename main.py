@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import os
 import canny
-
+from datetime import datetime
 
 class Snap:
     number_of_snaps = 0
@@ -13,15 +13,16 @@ class Snap:
         self.path = {'raw': path}
         self.number = Snap.number_of_snaps
         Snap.number_of_snaps += 1
-        self.res = cv.imread(path)[:, :, 0].shape
+        self.particles = []
 
 
 class Particle:
     def __init__(self):
-        self.A = 0
-        self.c = [0, 0]
-        self.pos = [0, 0]
-        self.rect = [0, 0]
+        pass
+        #self.A = 0
+        #self.c = [0, 0]
+        #self.pos = [0, 0]
+        #self.rect = [0, 0]
 
 
 if __name__ == '__main__':
@@ -41,38 +42,44 @@ if __name__ == '__main__':
         if directory in os.listdir(os.getcwd()):
             for file in os.listdir(os.getcwd() + '\\' + directory):
                 os.remove(os.getcwd() + '\\' + directory + '\\' + file)
-                print(directory, ' ', file, ' ', 'has been removed')
+                print(datetime.now().time(), directory, ' ', file, ' ', 'has been removed')
             os.rmdir(directory)
         os.mkdir(directory)
         for frame in frames:
             frame.path[directory] = os.getcwd() + '\\' + directory + '\\' + frame.name
-    del directory, directories
+    del directory, directories, frame, file_format, file_name
+
     # Обрезка и запись изображений
+    # Поиск минимумов
+    cr = cv.imread(frames[0].path['raw'])[:, 0:1000, 0]
+    cv.imwrite(frames[0].path['crop'], cr)
+    background = cr
     for frame in frames:
         cr = cv.imread(frame.path['raw'])[:, 0:1000, 0]
         cv.imwrite(frame.path['crop'], cr)
-    # Поиск минимумов
-    background = cv.imread(frames[0].path['crop'])[:, :, 0]
-    for frame in frames:
-        background = np.minimum(cv.imread(frame.path['crop'])[:, :, 0], background)
+        background = np.minimum(cr, background)
     cv.imwrite(os.getcwd() + '\\' + 'background.bmp', background)
+    print(datetime.now().time(), 'Background has been found')
     # Вычитание фона
     for frame in frames:
         subs = cv.imread(frame.path['crop'])[:, :, 0] - background
         cv.imwrite(frame.path['subs'], subs)
-    for frame in frames:
-        edge = cv.imread(frame.path['subs'])[:, :, 0]
+        edge = subs
+        # Размытие по гауссу 3х3
         edge = cv.blur(edge, (3, 3))
+        # Cany 100 200 границы
         edge = cv.Canny(edge, 100, 200)
         cv.imwrite(frame.path['edge'], edge)
-    for frame in frames:
-        fill = cv.imread(frame.path['edge'])[:, :, 0]
-        fill = canny.fill_parts_n_remove_threads(fill)
+        fill = edge
+        # Открытие структурным элементом - крест
+        fill = canny.fill_parts_n_remove_threads(fill,  ellipse_size=3)
         cv.imwrite(frame.path['fill'], fill)
-    for frame in frames:
-        proc = cv.imread(frame.path['fill'])[:, :, 0]
-        proc = canny.numerate_parts(proc)
-        cv.imwrite(frame.path['proc'], proc)
+        proc = fill
+        contours, hierarchy = cv.findContours(proc,cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+        area = cv.contourArea(contours[7])
+        #proc = canny.numerate_parts(proc)
+        #cv.imwrite(frame.path['proc'], proc)
+        #frame.particles = canny.count(proc)
     cv.imshow('a', fill)
     cv.waitKey(0)
     cv.destroyWindow('a')

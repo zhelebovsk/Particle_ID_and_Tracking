@@ -7,6 +7,7 @@ def fill_parts_n_remove_threads(img_in, ellipse_size=3):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ellipse_size, ellipse_size))
     img_proc = np.copy(img_in)
     res = np.shape(img_in)
+    # заливка по всем углам изображения
     if img_proc[0, 0] == 0:
         mask = np.zeros((res[0] + 2, res[1] + 2), np.uint8)
         cv2.floodFill(img_proc, mask, (0, 0), 255)
@@ -63,9 +64,9 @@ def count(img_in):
         q = np.argwhere(img_in == i + 1)
         pos.append(q)
         F.append(np.shape(q)[0])
-        xc.append(np.mean(q[:, 0]))
-        yc.append(np.mean(q[:, 1]))
-    return F, [xc, yc],pos
+        #xc.append(np.mean(q[:, 0]))
+        #yc.append(np.mean(q[:, 1]))
+    return F#, [xc, yc], pos
 
 
 if __name__ == '__main__':

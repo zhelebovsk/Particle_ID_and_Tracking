@@ -3,6 +3,23 @@ import numpy as np
 import main
 
 
+class Particle:
+    def __init__(self, area, x_c, y_c, limits):
+        self.area = area
+        self.c = [x_c, y_c]
+        self.limits = limits
+        self.slice = [slice(limits[0][0], limits[1][0] + 1), slice(limits[0][1], limits[1][1] + 1)]
+
+    def __cmp__(self, other):
+        return self.area - other.area
+
+    def __lt__(self, other):
+        return self.area < other.area
+
+    def __str__(self):
+        return str(self.area)
+
+
 def fill_parts_n_remove_threads(img_in, ellipse_size=3):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ellipse_size, ellipse_size))
     img_proc = np.copy(img_in)
@@ -27,46 +44,49 @@ def fill_parts_n_remove_threads(img_in, ellipse_size=3):
 
 
 def flood(img_in, img_out, x, y, val):
-    img_in[x, y] = 0
+    img_in[x, y] = False
     img_out[x, y] = val
     if x > 0:
-        if img_in[x - 1, y] != 0:
+        if img_in[x - 1, y]:
             flood(img_in, img_out, x-1, y, val)
     if x < np.shape(img_in)[0] - 1:
-        if img_in[x + 1, y] != 0:
+        if img_in[x + 1, y]:
             flood(img_in, img_out, x + 1, y, val)
     if y > 0:
-        if img_in[x, y - 1] != 0:
+        if img_in[x, y - 1]:
             flood(img_in, img_out, x, y - 1, val)
     if y < np.shape(img_in)[1] - 1:
-        if img_in[x, y + 1] != 0:
+        if img_in[x, y + 1]:
             flood(img_in, img_out, x, y + 1, val)
 
 
 def numerate_parts(img_in):
     img_proc = np.copy(img_in)
     img_out = np.zeros_like(img_proc)
+    img_proc = img_proc > 0
     k = 0
     a = np.argwhere(img_proc)
     for i in a:
-        if img_proc[i[0], i[1]] != 0:
+        if img_proc[i[0], i[1]]:
             k += 1
             flood(img_proc, img_out, i[0], i[1], k)
     return img_out
 
 
 def count(img_in):
-    F = []
-    xc = []
-    yc = []
-    pos = []
+    particles = []
     for i in range(np.max(img_in)):
         q = np.argwhere(img_in == i + 1)
-        pos.append(q)
-        F.append(np.shape(q)[0])
-        #xc.append(np.mean(q[:, 0]))
-        #yc.append(np.mean(q[:, 1]))
-    return F#, [xc, yc], pos
+        xmin = np.min(q[:, 0])
+        ymin = np.min(q[:, 1])
+        xmax = np.max(q[:, 0])
+        ymax = np.max(q[:, 1])
+        p = Particle(np.shape(q)[0],
+                     np.mean(q[:, 0]),
+                     np.mean(q[:, 1]),
+                     ((xmin, ymin), (xmax, ymax)))
+        particles.append(p)
+    return particles
 
 
 if __name__ == '__main__':
@@ -104,7 +124,7 @@ if __name__ == '__main__':
 
         A = numerate_parts(img_fill)
         # вывод результата
-        F, c, pos = count(A)
+        #F, c, pos = count(A)
         img_result = np.vstack((cv2.addWeighted(img_blur, 0.5, img_fill, 0.8, 0), img_edges, img_fill))
         cv2.imshow(window, cv2.resize(img_result, (int(0.8*res[1]), int(0.8*3*res[0]))))
         if cv2.waitKey(1) == ord('q'):

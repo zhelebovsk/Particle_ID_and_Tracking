@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 import os
 import canny
 from datetime import datetime
+import sys
+
 
 class Snap:
     number_of_snaps = 0
@@ -14,15 +16,6 @@ class Snap:
         self.number = Snap.number_of_snaps
         Snap.number_of_snaps += 1
         self.particles = []
-
-
-class Particle:
-    def __init__(self):
-        pass
-        #self.A = 0
-        #self.c = [0, 0]
-        #self.pos = [0, 0]
-        #self.rect = [0, 0]
 
 
 if __name__ == '__main__':
@@ -75,11 +68,17 @@ if __name__ == '__main__':
         fill = canny.fill_parts_n_remove_threads(fill,  ellipse_size=3)
         cv.imwrite(frame.path['fill'], fill)
         proc = fill
-        contours, hierarchy = cv.findContours(proc,cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
-        area = cv.contourArea(contours[7])
-        #proc = canny.numerate_parts(proc)
-        #cv.imwrite(frame.path['proc'], proc)
-        #frame.particles = canny.count(proc)
+        proc = canny.numerate_parts(proc)
+        cv.imwrite(frame.path['proc'], proc)
+        frame.particles = sorted(canny.count(proc))
+
+    #a = []
+    #b = []
+    #for frame in frames:
+    #    for part in frame.particles:
+    #        a.append(int(part.c[0]))
+    #        b.append(int(part.c[1]))
+
     cv.imshow('a', fill)
     cv.waitKey(0)
     cv.destroyWindow('a')

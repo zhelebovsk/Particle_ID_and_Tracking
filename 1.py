@@ -13,7 +13,7 @@ if __name__ == '__main__':
     img_fill = np.copy(img_original)
     cv2.floodFill(img_fill, mask, (0, 0), 255)
     img_fill = cv2.bitwise_not(img_fill)
-    img_fill = cv2.bitwise_or(img_fill,img_original)
+    img_fill = cv2.bitwise_or(img_fill, img_original)
     img_fill = cv2.morphologyEx(img_fill, cv2.MORPH_OPEN, kernel)
     del mask, kernel, img_original, h, w
 
